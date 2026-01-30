@@ -1,6 +1,6 @@
 SRC   ?= ssrm_test
 SHELL ?= bash
-RUN   ?= poetry run
+RUN   ?= uv run
 DOCS  ?= docs
 
 NOTEBOOKS ?= $(wildcard notebooks/*.ipynb)
@@ -15,19 +15,13 @@ help:  ## displays available make targets
 
 ## Environment ################################################################
 
-.PHONY: pip poetry install install-dev clean clean-pyc clean-notebooks
+.PHONY: install install-dev clean clean-pyc clean-notebooks
 
-pip:
-	python -m pip install --upgrade pip
+install:  ## installs dependencies for external users.
+	uv sync --frozen
 
-poetry:
-	pip install poetry
-
-install: pip poetry ## installs dependencies for external users.
-	poetry install --no-dev
-
-install-dev: pip poetry ## installs dev dependencies for local development.
-	poetry install
+install-dev:  ## installs dev dependencies for local development.
+	uv sync --frozen --all-extras
 	$(RUN) pre-commit install
 
 clean: clean-pyc  ## cleans all generated files.
@@ -45,50 +39,36 @@ clean-notebooks:
 
 ## Build/Release ##############################################################
 
-.PHONY: autoflake black docs flake isort fmt fmt-notebooks release publish publish-test
-
-autoflake:
-	$(RUN) autoflake --recursive --in-place --remove-all-unused-imports --remove-duplicate-keys $(SRC)
-
-black:
-	$(RUN) pre-commit run black --all-files
+.PHONY: docs fmt fmt-notebooks lint typecheck release
 
 docs:  ## builds docs.
 	$(MAKE) -C $(DOCS) clean html
 	# Copy logo image to fix Sphinx not groking relative paths in the README.
 	@mkdir -p $(DOCS)/build/html/logos && cp logos/*.png $(DOCS)/build/html/logos
 
-flake:  ## runs code linter.
-	$(RUN) flake8
-
-isort:
-	$(RUN) pre-commit run isort --all-files
-
-fmt: isort black flake  ## runs code auto-formatters (isort, black).
+fmt:  ## runs code auto-formatters and linter (ruff).
+	$(RUN) ruff check --fix $(SRC)
+	$(RUN) ruff format $(SRC)
 
 fmt-notebooks:  ## runs notebook auto-formatters (black_nbconvert).
 	$(RUN) black_nbconvert $(NOTEBOOKS)
 
+lint:  ## runs code linter (ruff).
+	$(RUN) ruff check $(SRC)
+	$(RUN) ruff format --check $(SRC)
+
+typecheck:  ## runs type checker (pyright).
+	$(RUN) pyright $(SRC)
+
 release: clean  ## builds release artifacts into dist directory.
-	poetry build
-
-publish: release ## publishes artifacts to PyPi.
-	@poetry config pypi-token.pypi ${PYPI_API_TOKEN}
-	poetry publish -n
-
-# For some reason, using poetry config pypi-token.pypi does not work for publishing to Test PyPi.
-publish-test: release ## publishes artifacts to Test PyPi.
-	poetry config repositories.testpypi https://test.pypi.org/legacy/
-	@poetry publish --repository testpypi -n -u ${PYPI_USERNAME} -p ${PYPI_TEST_API_TOKEN}
+	uv build
 
 ## Testing ####################################################################
 
-.PHONY: check lint flake test
-
-lint: flake
+.PHONY: check test
 
 test: PYTEST_ARGS ?= --color=yes --cov-report term --cov=$(SRC)
-test: ## runs the unit tests.
+test:  ## runs the unit tests.
 	$(RUN) pytest $(PYTEST_ARGS)
 
-check: lint test  ## runs all checks.
+check: lint typecheck test  ## runs all checks (lint, typecheck, test).
