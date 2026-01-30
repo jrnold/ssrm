@@ -13,7 +13,6 @@
 #     limitations under the License.
 
 import warnings
-from typing import List
 
 import numpy as np
 from scipy.special import gammaln, loggamma, xlogy
@@ -111,9 +110,9 @@ def posterior_probability(posterior_odds: float) -> float:
     float
         The posterior probability of an SRM.
     """
-    if posterior_odds == np.Inf:
+    if posterior_odds == np.inf:
         return 1
-    elif posterior_odds == -np.Inf:
+    elif posterior_odds == -np.inf:
         return 0
     else:
         return posterior_odds / (1.0 + posterior_odds)
@@ -278,13 +277,13 @@ def sequential_posteriors(
     null_probabilities: np.ndarray,
     dirichlet_probability=None,
     dirichlet_concentration=10000,
-) -> List[dict]:
+) -> list[dict]:
     """
     Accumulates the posteriors and marginal likelihoods for each datapoint.
 
     Parameters
     ----------
-    data : List[tuple]
+    data : list[tuple]
         Data.
     null_probabilities : np.ndarray
         The expected traffic allocation probability, where the values must sum to 1.
@@ -296,7 +295,7 @@ def sequential_posteriors(
 
     Returns
     -------
-    List[dict]
+    list[dict]
         Posterior distribution and marginal likelihoods at every datapoint.
 
     Examples
@@ -368,7 +367,7 @@ def srm_test(data: np.ndarray, null_probabilities: np.ndarray) -> float:
 
 
 def get_bayes_factor_threshold(
-    y: List[int], dirichlet_alpha: np.ndarray, alpha: float
+    y: list[int], dirichlet_alpha: np.ndarray, alpha: float
 ) -> float:
     """
     Computes a constant which defines a constraint in the convex
@@ -377,7 +376,7 @@ def get_bayes_factor_threshold(
 
     Parameters
     ----------
-    y : List[int]
+    y : list[int]
         Cumulative counts of visitors assigned to each arm.
     dirichlet_alpha : np.ndarray
         Parameter of dirichlet distribution.
@@ -397,18 +396,18 @@ def get_bayes_factor_threshold(
     )
 
 
-def multinomiallogpmf(x: List[int], n: int, p: List[float]):
+def multinomiallogpmf(x: list[int], n: int, p: list[float]):
     """
     Alternative implementation of multinomial.logpmf from scipy.stats.
     This is about 5x faster.
 
     Parameters
     ----------
-    x : List[int]
+    x : list[int]
         A list of observations e.g. [10,21,33].
     n : int
         The number of trials (equal to sum(x)).
-    p : List[float]
+    p : list[float]
         A list of probabilities which should sum to 1 e.g. [0.2, 0.4, 0.4].
 
     Returns
